@@ -31,14 +31,14 @@ public class SO {
 	}
 
 	public void preparar() {
-		Virtual.instancia().preparar(); // Inicia os endereços da memória virtual
+		Virtual.instancia().preparar();
 		this.getClock().iniciar();
 
 		for (int i = 1; i <= Disco.PROCESSOS; i++) {
 			Processo processo = new Processo(i, (new FabricaDeEntradas(RAM.PAGINAS * 2)).getNewEntrada());
-			Controle controle = new Controle(processo); // Controle dos limites da memória reservada
+			Controle controle = new Controle(processo);
 			controle.preparar();
-			
+
 			this.getProcessos().put(i, controle);
 			processo.start();
 		}
@@ -47,15 +47,17 @@ public class SO {
 	public void kill(int processo) {
 		this.getProcessos().remove(processo);
 		if ((this.getProcessos().isEmpty())) {
+			System.out.println("--- [ PROCESSOS FINALIZADOS! DESLIGANDO SO ] --------------------------");
 			this.getClock().parar();
 		}
 	}
 
 	public void clock() {
 		for (int endereco = 0; (endereco < Virtual.CAPACIDADE); ++endereco) {
-			/*if ((endereco == 0)) {
-				System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t CLOCK");
-			}*/
+			/*
+			 * if ((endereco == 0)) {
+			 * System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t CLOCK"); }
+			 */
 			Pagina pagina = Virtual.instancia().getPagina(endereco);
 			if ((pagina.isPresente())) {
 				pagina.clock();
@@ -67,24 +69,47 @@ public class SO {
 		String[] comandos = instrucao.split("-");
 		Controle controle = this.getProcessos().get(processo);
 
-		// Encontra o endereço verdadeiro pelo ID do processo
 		int endereco = Integer.parseInt(comandos[0]);
+		// Encontra o verdadeiro endereço pelo ID do processo
 		int enderecoVirtual = (Integer.parseInt(comandos[0]) + controle.getLIVirtual());
 
 		if ((comandos[1].equals("R"))) {
-			// System.out.println("[" + processo + "] > LER: endereco: '" + endereco + "', virtual: '" + enderecoVirtual + "'");
-			int valor = this.ler(controle, enderecoVirtual);
+			// System.out.println("[" + processo + "] > LER: endereco: '" +
+			// endereco + "', virtual: '" + enderecoVirtual + "'");
+			this.ler(controle, enderecoVirtual);
 		} else if ((comandos[1].equals("W"))) {
-			int valor = this.getGerador().nextInt(100); // Gera um valor entre 0 e 99 pra salvar no endereço
+			// Valor aleatório para ser persistido
+			int valor = this.getGerador().nextInt(100);
 			System.out.println("[" + processo + "] > GRAVAR: endereco: '" + endereco + "', virtual: '" + enderecoVirtual + "' -> VALOR '" + valor + "'");
 			this.gravar(controle, enderecoVirtual, valor);
 		}
 	}
 
+	/**
+	 * Em caso de *page fault* esse método é capaz de selecionar a melhor página
+	 * para ser chaveada da RAM para o DISCO.
+	 * 
+	 * @param limiteInferior Começo relativo da Thread na memória virtual
+	 * @param limiteSuperior Fim relativo da Thread na memória virtual
+	 * @return Pagina menos utilizada no ciclo atual
+	 */
 	private Pagina getMenosUtilizada(int limiteInferior, int limiteSuperior) {
 		Pagina menosUtilizada = null;
 		for (int endereco = limiteInferior; (endereco < limiteSuperior); ++endereco) {
 			Pagina paginaTestada = Virtual.instancia().getPagina(endereco);
+			/*
+			 * Para um página poder ser chaveada com o DISCO ela tem de estar
+			 * presente na RAM e o endereçamento tem de ser válido para que as
+			 * informações sejam persistidas sem perder de dados.
+			 * 
+			 * Se a página bater com o requisito de cima ela passa por outra
+			 * checagem onde, se nenhuma página menos utilizada tiver sido
+			 * selecionada em voltas anteriores do loop ela será a "escolhida"
+			 * até que em outros loops seja detectado alguém com um contador
+			 * maior, indicando estar a mais tempo sem utilização, para assumir
+			 * a posição.
+			 */
+
 			if ((paginaTestada.isPresente()) && (paginaTestada.getEndereco() >= 0)) {
 				if ((menosUtilizada == null) || (paginaTestada.getContador() > menosUtilizada.getContador())) {
 					menosUtilizada = paginaTestada;
@@ -95,6 +120,11 @@ public class SO {
 	}
 
 	private int ler(Controle controle, int endereco) {
+		/*
+		 * Ainda falta concluir esse método, fazer a parte de "chaveamento" com
+		 * da RAM com a SWAP caso seja necessário.
+		 */
+
 		Pagina pagina = Virtual.instancia().getPagina(endereco);
 		if ((pagina.getEndereco() > 0)) {
 			if ((pagina.isPresente())) {
@@ -109,10 +139,46 @@ public class SO {
 		for (int endereco = limiteInferior; (endereco < limiteSuperior); ++endereco) {
 			Integer valorLido = Virtual.instancia().ler(endereco, local);
 			if ((valorLido == null)) {
+				// Valor nulo significa que a memória está livre.
 				return endereco;
 			}
 		}
 		return -1;
+	}
+
+	/**
+	 * Para evitar repetições de código nos blocos "else" foi necessário
+	 * utilizar esse método para persistir o valor em alguns casos de page
+	 * fault.
+	 * 
+	 * @param controle Informações de controle do SO sobre o processo.
+	 * @param pagina Pagina recuperada anteriormente para ser persistida.
+	 * @param enderecoLivreDisco Endereço onde a página menos utilizada será
+	 *        persistida.
+	 * @param valor Valor que será persistido
+	 */
+	private void gravar(Controle controle, Pagina pagina, int enderecoLivreDisco, int valor) {
+		/*
+		 * Encontra a página menos utilizada na RAM e guarda as informações que
+		 * serão salvas em disco.
+		 */
+
+		// Roda o algoritmo de seleção de página "livre"
+		Pagina menosUtilizada = this.getMenosUtilizada(controle.getLIVirtual(), controle.getLSVirtual());
+
+		// Salva o endereço para poder ser utilizado mais na frente
+		int enderecoMenosUtilizada = menosUtilizada.getEndereco();
+
+		// Salva o valor para persistir no disco
+		int valorMenosUtilizada = Virtual.instancia().ler(enderecoMenosUtilizada, Virtual.LOCAL_RAM);
+
+		// Trata a página menos utilizada
+		Virtual.instancia().gravar(enderecoLivreDisco, valorMenosUtilizada, Virtual.LOCAL_DISCO);
+		menosUtilizada.gravar(enderecoLivreDisco, false, false, true);
+
+		// Trata a "nova" página
+		Virtual.instancia().gravar(enderecoMenosUtilizada, valor, Virtual.LOCAL_RAM);
+		pagina.gravar(enderecoMenosUtilizada, true, true, true);
 	}
 
 	private void gravar(Controle controle, int endereco, int valor) {
@@ -120,46 +186,95 @@ public class SO {
 		if ((pagina.isPresente())) {
 			System.err.println("[" + controle.getId() + "] Pagina presente!!!! Substituir valor.");
 			Virtual.instancia().gravar(pagina.getEndereco(), valor, Virtual.LOCAL_RAM);
-			pagina.gravar(pagina.getEndereco(), true, true, true); 
+			pagina.gravar(pagina.getEndereco(), true, true, true);
 		} else {
-			// Se a página não estiver presente a memória RAM
+			// Entra aqui se não estiver armazenado na memória RAM
 			if ((pagina.getEndereco() < 0)) {
+				/*
+				 * A página não está presente e não possui referência, logo é um
+				 * endereço que nunca foi utilizado
+				 * 
+				 * TENTAR GRAVAR DIRETO NA RAM
+				 * 
+				 * 1 - SE **CONSEGUIR** GRAVAR DIRETO NA RAM
+				 * 
+				 * 1.1 - Atualiza os status(R, M) e endereço da que foi gravada.
+				 * 
+				 * 2 - SE **NÃO CONSEGUIR** GRAVAR NA RAM
+				 * 
+				 * 2.1 - Escolhe uma posição livre no disco;
+				 * 
+				 * 2.2 - Encontrar uma página menos utilizada na RAM;
+				 * 
+				 * 2.3 - Armazena o endereço dessa página menos utilizada;
+				 * 
+				 * 2.4 - Armazena o valor da menos utilizada;
+				 * 
+				 * 2.5 - Remover da RAM o valor menos utilizado [2.4];
+				 * 
+				 * 2.6 - Salvar o valor da menos utilizada [2.4] no DISCO na
+				 * posição escolhida em [2.1];
+				 * 
+				 * 2.7 - Atualiza os status(R, M) e endereço da página menos
+				 * utilizada [2.2];
+				 * 
+				 * 2.8 - Gravar o novo valor na RAM na antiga posição da menos
+				 * utilizada [2.3];
+				 * 
+				 * 2.9 - Atualiza os status(R, M) e endereço da página[endereco
+				 * param].
+				 */
+
 				int enderecoLivreRAM = this.persistir(Virtual.LOCAL_RAM, controle.getLIFisica(), controle.getLSFisica());
 				if ((enderecoLivreRAM >= 0)) {
+					// Concluir a etapa [1]
 					System.err.println("[" + controle.getId() + "] Posição livre encontrada! Escrevendo valor na RAM.");
 					Virtual.instancia().gravar(enderecoLivreRAM, valor, Virtual.LOCAL_RAM);
 					pagina.gravar(enderecoLivreRAM, true, true, true);
 				} else {
+					// Concluir a etapa [2]
 					System.err.println("[" + controle.getId() + "] Page fault em NOVA PÁGINA... Encontrando página livre e substituindo.");
-					// Tratar a "antiga" página
-					Pagina menosUtilizada = this.getMenosUtilizada(controle.getLIVirtual(), controle.getLSVirtual());
-					int enderecoMenosUtilizada = menosUtilizada.getEndereco();
-					int valorMenosUtilizada = Virtual.instancia().ler(enderecoMenosUtilizada, Virtual.LOCAL_RAM);
-					
 					int enderecoLivreDisco = this.persistir(Virtual.LOCAL_DISCO, controle.getLIFisica(), controle.getLSFisica());
-					Virtual.instancia().gravar(enderecoLivreDisco, valorMenosUtilizada, Virtual.LOCAL_DISCO);
-					menosUtilizada.gravar(enderecoLivreDisco, false, false, true);
-					
-					// Tratar a "nova" página
-					Virtual.instancia().gravar(enderecoMenosUtilizada, valor, Virtual.LOCAL_RAM);
-					pagina.gravar(enderecoMenosUtilizada, true, true, true);
+
+					// Método "gravar" responsável por realizar a etapa 2
+					this.gravar(controle, pagina, enderecoLivreDisco, valor);
 				}
 			} else {
 				System.err.println("[" + controle.getId() + "] Page fault em PÁGINA EXISTENTE... Encontrando página livre e substituindo.");
-				// Entra aqui se já existir endereçamento, mas não está presente
+
+				/*
+				 * A página do endereço[param] não está presente, ou seja, está
+				 * no DISCO, e ela já possui uma referência, logo, precisamos
+				 * tirar ela do disco e por na RAM!
+				 * 
+				 * 1 - O endereço atual da página[endereco param] precisa ser
+				 * salvo, é a posição que vai ficar livre no DISCO;
+				 * 
+				 * 2 - Encontrar uma página menos utilizada na RAM;
+				 * 
+				 * 3 - Armazena o endereço dessa página menos utilizada;
+				 * 
+				 * 4 - Armazena o valor da página menos utilizada;
+				 * 
+				 * 5 - Remover da RAM o valor menos utilizado [4];
+				 * 
+				 * 6 - Salvar o valor da menos utilizada [2.4] no DISCO na
+				 * posição salva em [1];
+				 * 
+				 * 7 - Mudar os status(R, M) e endereço da página menos
+				 * utilizada [2];
+				 * 
+				 * 8 - Gravar o novo valor na RAM na antiga posição da menos
+				 * utilizada [3];
+				 * 
+				 * 9 - Mudar os status(R, M) e endereço da página[endereco
+				 * param].
+				 */
+
 				int enderecoLivreDisco = pagina.getContador();
-				// int valorRecuperadoDisco = Virtual.instancia().ler(enderecoLivreDisco, Virtual.LOCAL_DISCO);
-				
-				Pagina menosUtilizada = this.getMenosUtilizada(controle.getLIVirtual(), controle.getLSVirtual());
-				int enderecoMenosUtilizada = menosUtilizada.getEndereco();
-				int valorMenosUtilizada = Virtual.instancia().ler(enderecoMenosUtilizada, Virtual.LOCAL_RAM);
-				
-				Virtual.instancia().gravar(enderecoLivreDisco, valorMenosUtilizada, Virtual.LOCAL_DISCO);
-				menosUtilizada.gravar(enderecoLivreDisco, false, false, true);
-				
-				// Tratar a "novo" valor na página
-				Virtual.instancia().gravar(enderecoMenosUtilizada, valor, Virtual.LOCAL_RAM);
-				pagina.gravar(enderecoMenosUtilizada, true, true, true);
+
+				// Método "gravar" responsável por realizar as etapas
+				this.gravar(controle, pagina, enderecoLivreDisco, valor);
 			}
 		}
 
@@ -202,19 +317,32 @@ public class SO {
 		private Controle(Processo instancia) {
 			this.setProcesso(instancia);
 		}
-		
+
 		private void preparar() {
+			/*
+			 * Thread1 solicitou '0-R' e Thread2 solicitou '0-W'
+			 * 
+			 * Para que o '0' da Thread1 seja diferente do '0' da Thread2 é
+			 * necessário "dividir" a memória.
+			 * 
+			 * Esse método faz apenas definir os limites da memória virtual e da
+			 * "física", quanto menor o ID mais próximo do começo da Array e
+			 * quanto maior o ID mais distante do início.
+			 * 
+			 * LI: Limite Inferior, LS: Limite Superior
+			 */
+
 			int LIFisica = (RAM.PAGINAS * this.getId()) - RAM.PAGINAS;
 			int LSFisica = (LIFisica + RAM.PAGINAS);
-			
+
 			this.setLIFisica(LIFisica);
 			this.setLSFicia(LSFisica);
 			this.setLIVirtual(this.getLIFisica() * 2);
 			this.setLSVirtual(this.getLSFisica() * 2);
-			
+
 			System.out.println("[" + this.getId() + "] > LIF: '" + this.getLIFisica() + "', LSF: '" + this.getLSFisica() + "', LIV: '" + this.getLIVirtual() + "', LSV: '" + this.getLSVirtual() + "'");
 		}
-		
+
 		public int getId() {
 			return this.getProcesso().getProcesso();
 		}
@@ -258,7 +386,7 @@ public class SO {
 		private void setLSVirtual(int lSVirtual) {
 			this.LSVirtual = lSVirtual;
 		}
-		
+
 	}
 
 }

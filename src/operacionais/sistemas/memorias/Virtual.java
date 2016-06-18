@@ -35,6 +35,12 @@ public final class Virtual {
 		}
 	}
 
+	/*
+	 * Nos métodos abaixo, aparentemente a memória virtual está acessando
+	 * diretamente a RAM/DISCO, no entanto esse método é apenas para auxiliar e
+	 * é chamado apenas quando o SO solicita em ler/gravar.
+	 */
+
 	public Integer ler(int endereco, int local) {
 		if ((local == Virtual.LOCAL_RAM)) {
 			return this.getRam().ler(endereco);
@@ -66,13 +72,6 @@ public final class Virtual {
 		this.disco = disco;
 	}
 
-	/**
-	 * Pega a página solicitada pelo parametro endereco. Retorna NULL se for um
-	 * endereço inválido.
-	 * 
-	 * @param endereco Posição da página a ser recuperada;
-	 * @return Pagina mapeada no endereço solicitado.
-	 */
 	public Pagina getPagina(int endereco) {
 		return this.getEnderecos().get(endereco);
 	}
@@ -111,7 +110,8 @@ public final class Virtual {
 
 		public void clock() {
 			++this.contador;
-			if (((this.contador % 7) == 0)) {
+			if (((this.contador % 17) == 0)) {
+				this.setContador(0);
 				this.setReferenciada(false);
 				// System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t FIM DO CICLO DE CLOCK");
 			}

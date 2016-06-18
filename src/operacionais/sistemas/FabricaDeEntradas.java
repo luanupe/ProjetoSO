@@ -22,7 +22,7 @@ public class FabricaDeEntradas {
 		}
 		
 		if(QTD_ACESSO_ENTRADA < 25) {
-			throw new IllegalArgumentException("Tamanho da entrada não pode ser menor que 20");
+			throw new IllegalArgumentException("Tamanho da entrada não pode ser menor que 25");
 		}
 	}
 	

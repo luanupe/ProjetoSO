@@ -15,8 +15,8 @@ public class Processo extends Thread {
 		String comandos[] = this.getInstrucoes().split(",");
 		for (String instrucao : comandos) {
 			try {
-				Thread.sleep(500);
 				SO.instancia().interpretar(this.getProcesso(), instrucao);
+				Thread.sleep(500l);
 			} catch (InterruptedException error) {
 				error.printStackTrace();
 			} catch (Exception error) {
