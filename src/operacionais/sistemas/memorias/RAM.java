@@ -15,7 +15,7 @@ public class RAM {
 	}
 
 	public Integer ler(int endereco) {
-		if ((endereco < 0) || (endereco >= RAM.CAPACIDADE)) {
+		if ((endereco < 0) || (endereco >= RAM.CAPACIDADE)) { 
 			// EXCEPTION: Violação de memória
 		}
 		return this.getEnderecos().get(endereco);

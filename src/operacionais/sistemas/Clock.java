@@ -1,6 +1,6 @@
 package operacionais.sistemas;
 
-public final class Clock extends Thread {
+public final class Clock extends Thread { 
 
 	private int tempo;
 	private boolean rodando;

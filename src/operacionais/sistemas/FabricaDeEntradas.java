@@ -3,7 +3,7 @@ package operacionais.sistemas;
 import java.util.Random;
 import java.util.ArrayList;
 
-public class FabricaDeEntradas {
+public class FabricaDeEntradas { 
 	
 	public static final int QTD_ACESSO_ENTRADA = 100;
 	private int tamanhoMemoriaVirtual = 0;

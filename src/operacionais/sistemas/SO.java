@@ -18,7 +18,7 @@ public class SO {
 			SO.INSTANCIA = new SO();
 		}
 		return SO.INSTANCIA;
-	}
+	} 
 
 	private Clock clock;
 	private Random gerador;

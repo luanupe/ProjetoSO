@@ -5,7 +5,7 @@ public class Processo extends Thread {
 	private int processo;
 	private String instrucoes;
 
-	protected Processo(int processo, String instrucoes) {
+	protected Processo(int processo, String instrucoes) { 
 		this.setProcesso(processo);
 		this.setInstrucoes(instrucoes);
 	}
