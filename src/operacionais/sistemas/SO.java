@@ -20,18 +20,20 @@ public class SO {
 		return SO.INSTANCIA;
 	}
 
+	private Clock clock;
 	private Random gerador;
-	private FabricaDeEntradas entradas;
 	private Map<Integer, Controle> processos;
 
 	public SO() {
+		this.setClock(new Clock());
 		this.setGerador(new Random());
-		// this.setEntradas(new FabricaDeEntradas(RAM.PAGINAS * 2));
 		this.setProcessos(new HashMap<Integer, Controle>());
 	}
 
 	public void preparar() {
 		Virtual.instancia().preparar(); // Inicia os endereços da memória virtual
+		this.getClock().iniciar();
+
 		for (int i = 1; i <= Disco.PROCESSOS; i++) {
 			Processo processo = new Processo(i, (new FabricaDeEntradas(RAM.PAGINAS * 2)).getNewEntrada());
 			Controle controle = new Controle(processo); // Controle dos limites da memória reservada
@@ -39,6 +41,25 @@ public class SO {
 			
 			this.getProcessos().put(i, controle);
 			processo.start();
+		}
+	}
+
+	public void kill(int processo) {
+		this.getProcessos().remove(processo);
+		if ((this.getProcessos().isEmpty())) {
+			this.getClock().parar();
+		}
+	}
+
+	public void clock() {
+		for (int endereco = 0; (endereco < Virtual.CAPACIDADE); ++endereco) {
+			/*if ((endereco == 0)) {
+				System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t CLOCK");
+			}*/
+			Pagina pagina = Virtual.instancia().getPagina(endereco);
+			if ((pagina.isPresente())) {
+				pagina.clock();
+			}
 		}
 	}
 
@@ -51,7 +72,7 @@ public class SO {
 		int enderecoVirtual = (Integer.parseInt(comandos[0]) + controle.getLIVirtual());
 
 		if ((comandos[1].equals("R"))) {
-			System.out.println("[" + processo + "] > LER: endereco: '" + endereco + "', virtual: '" + enderecoVirtual + "'");
+			// System.out.println("[" + processo + "] > LER: endereco: '" + endereco + "', virtual: '" + enderecoVirtual + "'");
 			int valor = this.ler(controle, enderecoVirtual);
 		} else if ((comandos[1].equals("W"))) {
 			int valor = this.getGerador().nextInt(100); // Gera um valor entre 0 e 99 pra salvar no endereço
@@ -98,8 +119,8 @@ public class SO {
 		Pagina pagina = Virtual.instancia().getPagina(endereco);
 		if ((pagina.isPresente())) {
 			System.err.println("[" + controle.getId() + "] Pagina presente!!!! Substituir valor.");
-			// Página já está presenta na memória RAM, apenas sobreescrever o valor
 			Virtual.instancia().gravar(pagina.getEndereco(), valor, Virtual.LOCAL_RAM);
+			pagina.gravar(pagina.getEndereco(), true, true, true); 
 		} else {
 			// Se a página não estiver presente a memória RAM
 			if ((pagina.getEndereco() < 0)) {
@@ -107,14 +128,9 @@ public class SO {
 				if ((enderecoLivreRAM >= 0)) {
 					System.err.println("[" + controle.getId() + "] Posição livre encontrada! Escrevendo valor na RAM.");
 					Virtual.instancia().gravar(enderecoLivreRAM, valor, Virtual.LOCAL_RAM);
-					pagina.setEndereco(enderecoLivreRAM);
-					pagina.setReferenciada(true);
-					pagina.setModificada(true);
-					pagina.setPresente(true);
+					pagina.gravar(enderecoLivreRAM, true, true, true);
 				} else {
 					System.err.println("[" + controle.getId() + "] Page fault em NOVA PÁGINA... Encontrando página livre e substituindo.");
-					// Page fault
-					
 					// Tratar a "antiga" página
 					Pagina menosUtilizada = this.getMenosUtilizada(controle.getLIVirtual(), controle.getLSVirtual());
 					int enderecoMenosUtilizada = menosUtilizada.getEndereco();
@@ -122,40 +138,41 @@ public class SO {
 					
 					int enderecoLivreDisco = this.persistir(Virtual.LOCAL_DISCO, controle.getLIFisica(), controle.getLSFisica());
 					Virtual.instancia().gravar(enderecoLivreDisco, valorMenosUtilizada, Virtual.LOCAL_DISCO);
-					
-					menosUtilizada.setPresente(false);
-					menosUtilizada.setEndereco(enderecoLivreDisco);
+					menosUtilizada.gravar(enderecoLivreDisco, false, false, true);
 					
 					// Tratar a "nova" página
 					Virtual.instancia().gravar(enderecoMenosUtilizada, valor, Virtual.LOCAL_RAM);
-					pagina.setPresente(true);
-					pagina.setEndereco(enderecoMenosUtilizada);
-					pagina.setReferenciada(true);
-					pagina.setModificada(true);
+					pagina.gravar(enderecoMenosUtilizada, true, true, true);
 				}
 			} else {
 				System.err.println("[" + controle.getId() + "] Page fault em PÁGINA EXISTENTE... Encontrando página livre e substituindo.");
-				// Se já existir endereçamento, mas não está presente
+				// Entra aqui se já existir endereçamento, mas não está presente
 				int enderecoLivreDisco = pagina.getContador();
-				int valorRecuperadoDisco = Virtual.instancia().ler(enderecoLivreDisco, Virtual.LOCAL_DISCO);
+				// int valorRecuperadoDisco = Virtual.instancia().ler(enderecoLivreDisco, Virtual.LOCAL_DISCO);
 				
 				Pagina menosUtilizada = this.getMenosUtilizada(controle.getLIVirtual(), controle.getLSVirtual());
 				int enderecoMenosUtilizada = menosUtilizada.getEndereco();
 				int valorMenosUtilizada = Virtual.instancia().ler(enderecoMenosUtilizada, Virtual.LOCAL_RAM);
 				
 				Virtual.instancia().gravar(enderecoLivreDisco, valorMenosUtilizada, Virtual.LOCAL_DISCO);
+				menosUtilizada.gravar(enderecoLivreDisco, false, false, true);
 				
 				// Tratar a "novo" valor na página
 				Virtual.instancia().gravar(enderecoMenosUtilizada, valor, Virtual.LOCAL_RAM);
-				pagina.setPresente(true);
-				pagina.setEndereco(enderecoMenosUtilizada);
-				pagina.setReferenciada(true);
-				pagina.setModificada(true);
+				pagina.gravar(enderecoMenosUtilizada, true, true, true);
 			}
 		}
 
 		System.out.println("[" + controle.getId() + "] RAM: " + Virtual.instancia().getRam().toString());
 		System.out.println("[" + controle.getId() + "] DISCO: " + Virtual.instancia().getDisco().toString());
+	}
+
+	private Clock getClock() {
+		return this.clock;
+	}
+
+	private void setClock(Clock clock) {
+		this.clock = clock;
 	}
 
 	private Random getGerador() {
@@ -164,14 +181,6 @@ public class SO {
 
 	private void setGerador(Random gerador) {
 		this.gerador = gerador;
-	}
-
-	private FabricaDeEntradas getEntradas() {
-		return this.entradas;
-	}
-
-	private void setEntradas(FabricaDeEntradas entradas) {
-		this.entradas = entradas;
 	}
 
 	private Map<Integer, Controle> getProcessos() {

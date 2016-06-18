@@ -7,8 +7,7 @@ public final class Virtual {
 
 	public final static int LOCAL_RAM = 0;
 	public final static int LOCAL_DISCO = 1;
-
-	private final static int CAPACIDADE = (RAM.CAPACIDADE * 2);
+	public final static int CAPACIDADE = (RAM.CAPACIDADE * 2);
 
 	private static Virtual INSTANCIA;
 
@@ -100,6 +99,22 @@ public final class Virtual {
 			this.setPresente(false);
 			this.setModificada(false);
 			this.setReferenciada(false);
+		}
+
+		public void gravar(int endereco, boolean presente, boolean modificada, boolean referenciada) {
+			this.setContador(0);
+			this.setEndereco(endereco);
+			this.setPresente(presente);
+			this.setModificada(modificada);
+			this.setReferenciada(referenciada);
+		}
+
+		public void clock() {
+			++this.contador;
+			if (((this.contador % 7) == 0)) {
+				this.setReferenciada(false);
+				// System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t FIM DO CICLO DE CLOCK");
+			}
 		}
 
 		public int getContador() {
