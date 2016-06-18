@@ -41,7 +41,7 @@ public final class Virtual {
 	 * é chamado apenas quando o SO solicita em ler/gravar.
 	 */
 
-	public Integer ler(int endereco, int local) {
+	public Integer ler(int endereco, int local) { 
 		if ((local == Virtual.LOCAL_RAM)) {
 			return this.getRam().ler(endereco);
 		}
