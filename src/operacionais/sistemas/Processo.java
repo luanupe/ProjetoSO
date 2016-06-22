@@ -13,6 +13,11 @@ public class Processo extends Thread {
 	@Override
 	public void run() {
 		String comandos[] = this.getInstrucoes().split(",");
+		/*for (int i = 0; i < comandos.length; i++) {
+			String instrucao = comandos[i];
+		}*/
+		
+		
 		for (String instrucao : comandos) {
 			try {
 				SO.instancia().interpretar(this.getProcesso(), instrucao);

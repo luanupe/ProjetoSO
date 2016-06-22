@@ -18,7 +18,7 @@ public class SO {
 			SO.INSTANCIA = new SO();
 		}
 		return SO.INSTANCIA;
-	} 
+	}
 
 	private Clock clock;
 	private Random gerador;
@@ -44,6 +44,9 @@ public class SO {
 		}
 	}
 
+	/*
+	 * Para o clock depois que toda a fábrica de entrada tiver sido consumida.
+	 */
 	public void kill(int processo) {
 		this.getProcessos().remove(processo);
 		if ((this.getProcessos().isEmpty())) {
@@ -65,22 +68,23 @@ public class SO {
 		}
 	}
 
-	public void interpretar(int processo, String instrucao) {
+	public void interpretar(int idProcesso, String instrucao) {
 		String[] comandos = instrucao.split("-");
-		Controle controle = this.getProcessos().get(processo);
+		Controle controle = this.getProcessos().get(idProcesso);
 
 		int endereco = Integer.parseInt(comandos[0]);
 		// Encontra o verdadeiro endereço pelo ID do processo
-		int enderecoVirtual = (Integer.parseInt(comandos[0]) + controle.getLIVirtual());
+		int enderecoVirtual = endereco + controle.getLIVirtual();
 
 		if ((comandos[1].equals("R"))) {
 			// System.out.println("[" + processo + "] > LER: endereco: '" +
 			// endereco + "', virtual: '" + enderecoVirtual + "'");
-			this.ler(controle, enderecoVirtual);
+			int valorLido = this.ler(controle, enderecoVirtual);
+			System.out.println("[" + idProcesso + "] > LEU: endereco: '" + endereco + "', virtual: '" + enderecoVirtual + "' -> VALOR '" + valorLido + "'");
 		} else if ((comandos[1].equals("W"))) {
 			// Valor aleatório para ser persistido
 			int valor = this.getGerador().nextInt(100);
-			System.out.println("[" + processo + "] > GRAVAR: endereco: '" + endereco + "', virtual: '" + enderecoVirtual + "' -> VALOR '" + valor + "'");
+			System.out.println("[" + idProcesso + "] > GRAVAR: endereco: '" + endereco + "', virtual: '" + enderecoVirtual + "' -> VALOR '" + valor + "'");
 			this.gravar(controle, enderecoVirtual, valor);
 		}
 	}
@@ -120,26 +124,36 @@ public class SO {
 	}
 
 	private int ler(Controle controle, int endereco) {
-		/*
-		 * Ainda falta concluir esse método, fazer a parte de "chaveamento" com
-		 * da RAM com a SWAP caso seja necessário.
-		 */
-
 		Pagina pagina = Virtual.instancia().getPagina(endereco);
-		if ((pagina.getEndereco() > 0)) {
-			if ((pagina.isPresente())) {
-				// return Virtual.instancia().ler(endereco, Virtual.LOCAL_RAM);
+		if ((!(pagina.isPresente()))) {
+			if ((pagina.getEndereco() < 0)) {
+				return -1;
+			} else {
+				Pagina menosUtilizada = this.getMenosUtilizada(controle.getLIVirtual(), controle.getLSVirtual());
+				int enderecoMenosUtilizada = menosUtilizada.getEndereco();
+				int valorMenosUtilizada = Virtual.instancia().ler(enderecoMenosUtilizada, Virtual.LOCAL_RAM);
+				
+				int valorNoDisco = Virtual.instancia().ler(pagina.getEndereco(), Virtual.LOCAL_DISCO);
+				int enderecoNoDisco = pagina.getEndereco();
+				
+				Virtual.instancia().getRam().remover(enderecoMenosUtilizada);
+				Virtual.instancia().getDisco().remover(enderecoNoDisco);
+				
+				Virtual.instancia().gravar(enderecoMenosUtilizada, valorNoDisco, Virtual.LOCAL_RAM);
+				pagina.atualizar(enderecoMenosUtilizada, true, false, true);
+				
+				Virtual.instancia().gravar(enderecoNoDisco, valorMenosUtilizada, Virtual.LOCAL_DISCO);
+				menosUtilizada.atualizar(enderecoNoDisco, false, false, true);
 			}
-			// return Virtual.instancia().ler(endereco, Virtual.LOCAL_DISCO);
 		}
-		return 0;
+		
+		return Virtual.instancia().ler(pagina.getEndereco(), Virtual.LOCAL_RAM);
 	}
 
-	private int persistir(int local, int limiteInferior, int limiteSuperior) {
-		for (int endereco = limiteInferior; (endereco < limiteSuperior); ++endereco) {
+	private synchronized int persistir(int local) {
+		for (int endereco = 0; (endereco < RAM.CAPACIDADE); endereco++) {
 			Integer valorLido = Virtual.instancia().ler(endereco, local);
 			if ((valorLido == null)) {
-				// Valor nulo significa que a memória está livre.
 				return endereco;
 			}
 		}
@@ -157,7 +171,7 @@ public class SO {
 	 *        persistida.
 	 * @param valor Valor que será persistido
 	 */
-	private void gravar(Controle controle, Pagina pagina, int enderecoLivreDisco, int valor) {
+	private void gravarPraNaoRepetirOCodigo(Controle controle, Pagina pagina, int enderecoLivreDisco, int valor) {
 		/*
 		 * Encontra a página menos utilizada na RAM e guarda as informações que
 		 * serão salvas em disco.
@@ -173,12 +187,15 @@ public class SO {
 		int valorMenosUtilizada = Virtual.instancia().ler(enderecoMenosUtilizada, Virtual.LOCAL_RAM);
 
 		// Trata a página menos utilizada
+		Virtual.instancia().getRam().remover(enderecoMenosUtilizada);
+		Virtual.instancia().getDisco().remover(enderecoLivreDisco);
+
 		Virtual.instancia().gravar(enderecoLivreDisco, valorMenosUtilizada, Virtual.LOCAL_DISCO);
-		menosUtilizada.gravar(enderecoLivreDisco, false, false, true);
+		menosUtilizada.atualizar(enderecoLivreDisco, false, false, true);
 
 		// Trata a "nova" página
 		Virtual.instancia().gravar(enderecoMenosUtilizada, valor, Virtual.LOCAL_RAM);
-		pagina.gravar(enderecoMenosUtilizada, true, true, true);
+		pagina.atualizar(enderecoMenosUtilizada, true, true, true);
 	}
 
 	private void gravar(Controle controle, int endereco, int valor) {
@@ -186,12 +203,12 @@ public class SO {
 		if ((pagina.isPresente())) {
 			System.err.println("[" + controle.getId() + "] Pagina presente!!!! Substituir valor.");
 			Virtual.instancia().gravar(pagina.getEndereco(), valor, Virtual.LOCAL_RAM);
-			pagina.gravar(pagina.getEndereco(), true, true, true);
+			pagina.atualizar(pagina.getEndereco(), true, true, true);
 		} else {
 			// Entra aqui se não estiver armazenado na memória RAM
 			if ((pagina.getEndereco() < 0)) {
 				/*
-				 * A página não está presente e não possui referência, logo é um
+				 * A página não está presente e não possui mapeamento, logo é um
 				 * endereço que nunca foi utilizado
 				 * 
 				 * TENTAR GRAVAR DIRETO NA RAM
@@ -225,19 +242,19 @@ public class SO {
 				 * param].
 				 */
 
-				int enderecoLivreRAM = this.persistir(Virtual.LOCAL_RAM, controle.getLIFisica(), controle.getLSFisica());
+				int enderecoLivreRAM = this.persistir(Virtual.LOCAL_RAM);
 				if ((enderecoLivreRAM >= 0)) {
 					// Concluir a etapa [1]
 					System.err.println("[" + controle.getId() + "] Posição livre encontrada! Escrevendo valor na RAM.");
 					Virtual.instancia().gravar(enderecoLivreRAM, valor, Virtual.LOCAL_RAM);
-					pagina.gravar(enderecoLivreRAM, true, true, true);
+					pagina.atualizar(enderecoLivreRAM, true, true, true);
 				} else {
 					// Concluir a etapa [2]
 					System.err.println("[" + controle.getId() + "] Page fault em NOVA PÁGINA... Encontrando página livre e substituindo.");
-					int enderecoLivreDisco = this.persistir(Virtual.LOCAL_DISCO, controle.getLIFisica(), controle.getLSFisica());
+					int enderecoLivreDisco = this.persistir(Virtual.LOCAL_DISCO);
 
 					// Método "gravar" responsável por realizar a etapa 2
-					this.gravar(controle, pagina, enderecoLivreDisco, valor);
+					this.gravarPraNaoRepetirOCodigo(controle, pagina, enderecoLivreDisco, valor);
 				}
 			} else {
 				System.err.println("[" + controle.getId() + "] Page fault em PÁGINA EXISTENTE... Encontrando página livre e substituindo.");
@@ -274,12 +291,13 @@ public class SO {
 				int enderecoLivreDisco = pagina.getContador();
 
 				// Método "gravar" responsável por realizar as etapas
-				this.gravar(controle, pagina, enderecoLivreDisco, valor);
+				this.gravarPraNaoRepetirOCodigo(controle, pagina, enderecoLivreDisco, valor);
 			}
 		}
 
 		System.out.println("[" + controle.getId() + "] RAM: " + Virtual.instancia().getRam().toString());
 		System.out.println("[" + controle.getId() + "] DISCO: " + Virtual.instancia().getDisco().toString());
+		System.out.println("[" + controle.getId() + "] VIRTUAL: " + Virtual.instancia().toString());
 	}
 
 	private Clock getClock() {
@@ -309,8 +327,6 @@ public class SO {
 	private class Controle {
 
 		private Processo processo;
-		private int LIFisica;
-		private int LSFisica;
 		private int LIVirtual;
 		private int LSVirtual;
 
@@ -332,15 +348,11 @@ public class SO {
 			 * LI: Limite Inferior, LS: Limite Superior
 			 */
 
-			int LIFisica = (RAM.PAGINAS * this.getId()) - RAM.PAGINAS;
-			int LSFisica = (LIFisica + RAM.PAGINAS);
+			int LIVirtual = (RAM.PAGINAS * this.getId()) - RAM.PAGINAS;
+			int LSVirtual = (LIVirtual + RAM.PAGINAS);
 
-			this.setLIFisica(LIFisica);
-			this.setLSFicia(LSFisica);
-			this.setLIVirtual(this.getLIFisica() * 2);
-			this.setLSVirtual(this.getLSFisica() * 2);
-
-			System.out.println("[" + this.getId() + "] > LIF: '" + this.getLIFisica() + "', LSF: '" + this.getLSFisica() + "', LIV: '" + this.getLIVirtual() + "', LSV: '" + this.getLSVirtual() + "'");
+			this.setLIVirtual(LIVirtual * 2);
+			this.setLSVirtual(LSVirtual * 2);
 		}
 
 		public int getId() {
@@ -353,22 +365,6 @@ public class SO {
 
 		private void setProcesso(Processo processo) {
 			this.processo = processo;
-		}
-
-		public int getLIFisica() {
-			return this.LIFisica;
-		}
-
-		private void setLIFisica(int LIFisica) {
-			this.LIFisica = LIFisica;
-		}
-
-		public int getLSFisica() {
-			return this.LSFisica;
-		}
-
-		private void setLSFicia(int LSFisica) {
-			this.LSFisica = LSFisica;
 		}
 
 		public int getLIVirtual() {

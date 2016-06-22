@@ -84,6 +84,14 @@ public final class Virtual {
 		this.enderecos = enderecos;
 	}
 
+	public String toString() {
+		String string = "";
+		for (Map.Entry<Integer, Pagina> endereco : this.getEnderecos().entrySet()) {
+			string += "[" + endereco.getKey() + "][" + (endereco.getValue().isPresente() ? "R" : "D") + "] = '" + endereco.getValue().getEndereco() + "'; ";
+		}
+		return string;
+	}
+
 	public class Pagina {
 
 		private int contador;
@@ -100,7 +108,7 @@ public final class Virtual {
 			this.setReferenciada(false);
 		}
 
-		public void gravar(int endereco, boolean presente, boolean modificada, boolean referenciada) {
+		public void atualizar(int endereco, boolean presente, boolean modificada, boolean referenciada) {
 			this.setContador(0);
 			this.setEndereco(endereco);
 			this.setPresente(presente);
@@ -110,7 +118,7 @@ public final class Virtual {
 
 		public void clock() {
 			++this.contador;
-			if (((this.contador % 17) == 0)) {
+			if (((this.contador % 19) == 0)) {
 				this.setContador(0);
 				this.setReferenciada(false);
 				// System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t FIM DO CICLO DE CLOCK");
