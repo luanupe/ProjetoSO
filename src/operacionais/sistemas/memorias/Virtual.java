@@ -1,5 +1,6 @@
 package operacionais.sistemas.memorias;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -74,6 +75,10 @@ public final class Virtual {
 
 	public Pagina getPagina(int endereco) {
 		return this.getEnderecos().get(endereco);
+	}
+	
+	public Collection<Pagina> getPaginas() {
+		return this.getEnderecos().values();
 	}
 
 	private Map<Integer, Pagina> getEnderecos() {

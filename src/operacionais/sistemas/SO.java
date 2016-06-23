@@ -8,6 +8,7 @@ import operacionais.sistemas.memorias.Disco;
 import operacionais.sistemas.memorias.RAM;
 import operacionais.sistemas.memorias.Virtual;
 import operacionais.sistemas.memorias.Virtual.Pagina;
+import operacionais.sistemas.ui.Memorias;
 
 public class SO {
 
@@ -201,7 +202,7 @@ public class SO {
 	private void gravar(Controle controle, int endereco, int valor) {
 		Pagina pagina = Virtual.instancia().getPagina(endereco);
 		if ((pagina.isPresente())) {
-			System.err.println("[" + controle.getId() + "] Pagina presente!!!! Substituir valor.");
+			System.out.println("[" + controle.getId() + "] Pagina presente!!!! Substituir valor.");
 			Virtual.instancia().gravar(pagina.getEndereco(), valor, Virtual.LOCAL_RAM);
 			pagina.atualizar(pagina.getEndereco(), true, true, true);
 		} else {
@@ -245,19 +246,19 @@ public class SO {
 				int enderecoLivreRAM = this.persistir(Virtual.LOCAL_RAM);
 				if ((enderecoLivreRAM >= 0)) {
 					// Concluir a etapa [1]
-					System.err.println("[" + controle.getId() + "] Posição livre encontrada! Escrevendo valor na RAM.");
+					System.out.println("[" + controle.getId() + "] Posição livre encontrada! Escrevendo valor na RAM.");
 					Virtual.instancia().gravar(enderecoLivreRAM, valor, Virtual.LOCAL_RAM);
 					pagina.atualizar(enderecoLivreRAM, true, true, true);
 				} else {
 					// Concluir a etapa [2]
-					System.err.println("[" + controle.getId() + "] Page fault em NOVA PÁGINA... Encontrando página livre e substituindo.");
+					System.out.println("[" + controle.getId() + "] Page fault em NOVA PÁGINA... Encontrando página livre e substituindo.");
 					int enderecoLivreDisco = this.persistir(Virtual.LOCAL_DISCO);
 
 					// Método "gravar" responsável por realizar a etapa 2
 					this.gravarPraNaoRepetirOCodigo(controle, pagina, enderecoLivreDisco, valor);
 				}
 			} else {
-				System.err.println("[" + controle.getId() + "] Page fault em PÁGINA EXISTENTE... Encontrando página livre e substituindo.");
+				System.out.println("[" + controle.getId() + "] Page fault em PÁGINA EXISTENTE... Encontrando página livre e substituindo.");
 
 				/*
 				 * A página do endereço[param] não está presente, ou seja, está
@@ -288,7 +289,7 @@ public class SO {
 				 * param].
 				 */
 
-				int enderecoLivreDisco = pagina.getContador();
+				int enderecoLivreDisco = pagina.getEndereco();
 
 				// Método "gravar" responsável por realizar as etapas
 				this.gravarPraNaoRepetirOCodigo(controle, pagina, enderecoLivreDisco, valor);
