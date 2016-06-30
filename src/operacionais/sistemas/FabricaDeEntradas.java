@@ -6,6 +6,7 @@ import java.util.ArrayList;
 public class FabricaDeEntradas { 
 	
 	public static final int QTD_ACESSO_ENTRADA = 100;
+	public static final int RANGE_GERAR_GRAVACAO = 100;
 	private int tamanhoMemoriaVirtual = 0;
 	private int seed;
 	
@@ -66,8 +67,11 @@ public class FabricaDeEntradas {
 					loop[indexLoop++] = endereco + "-R,";
 					indexLoop = indexLoop % loop.length;
 				} else {
-					sb.append(endereco + "-W,");
-					loop[indexLoop++] = endereco + "-W,";
+					int valor = r.nextInt(FabricaDeEntradas.RANGE_GERAR_GRAVACAO);
+					sb.append(endereco + "-W-" + valor + ",");
+					loop[indexLoop++] = endereco + "-W-" + valor + ",";
+					// sb.append(endereco + "-W,");
+					// loop[indexLoop++] = endereco + "-W,";
 					indexLoop = indexLoop % loop.length;
 				}
 			}

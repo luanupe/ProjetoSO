@@ -1,6 +1,6 @@
 package operacionais.sistemas;
 
-public final class Clock extends Thread { 
+public final class Clock extends Thread {
 
 	private int tempo;
 	private boolean rodando;
@@ -11,12 +11,14 @@ public final class Clock extends Thread {
 	}
 
 	public void run() {
-		try {
-			while (this.isRodando()) {
+		while (this.isRodando()) {
+			try {
+				this.tempo++;
 				SO.instancia().clock();
-				Thread.sleep(500);
+				Thread.sleep(300);
+			} catch (InterruptedException error) {
+				
 			}
-		} catch (InterruptedException error) {
 		}
 	}
 

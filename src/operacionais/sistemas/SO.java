@@ -1,17 +1,15 @@
 package operacionais.sistemas;
 
 import java.util.Map;
-import java.util.Random;
 import java.util.HashMap;
-
-import operacionais.sistemas.memorias.Disco;
 import operacionais.sistemas.memorias.RAM;
+import operacionais.sistemas.memorias.Disco;
 import operacionais.sistemas.memorias.Virtual;
 import operacionais.sistemas.memorias.Virtual.Pagina;
-import operacionais.sistemas.ui.Memorias;
 
 public class SO {
 
+	public static final int CICLO = 19;
 	private static SO INSTANCIA;
 
 	public static SO instancia() {
@@ -22,12 +20,10 @@ public class SO {
 	}
 
 	private Clock clock;
-	private Random gerador;
 	private Map<Integer, Controle> processos;
 
 	public SO() {
 		this.setClock(new Clock());
-		this.setGerador(new Random());
 		this.setProcessos(new HashMap<Integer, Controle>());
 	}
 
@@ -51,20 +47,29 @@ public class SO {
 	public void kill(int processo) {
 		this.getProcessos().remove(processo);
 		if ((this.getProcessos().isEmpty())) {
-			System.out.println("--- [ PROCESSOS FINALIZADOS! DESLIGANDO SO ] --------------------------");
+			System.out.println("\n\n--- [ PROCESSOS FINALIZADOS! ] --------------------------");
 			this.getClock().parar();
 		}
 	}
 
 	public void clock() {
 		for (int endereco = 0; (endereco < Virtual.CAPACIDADE); ++endereco) {
-			/*
-			 * if ((endereco == 0)) {
-			 * System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t CLOCK"); }
-			 */
 			Pagina pagina = Virtual.instancia().getPagina(endereco);
+			
+			/*if ((endereco == 0)) {
+				if (((this.getClock().getTempo() % SO.CICLO) == 0)) {
+					System.out.println("\t\t\t\t\t\t\t\t\t\t FIM DE CICLO");
+				} else {
+					System.out.println("\t\t\t\t\t\t\t\t\t\t [" + this.getClock().getTempo() + "] CLOCK");
+				}
+			}*/
+			
 			if ((pagina.isPresente())) {
-				pagina.clock();
+				if (((this.getClock().getTempo() % SO.CICLO) == 0)) {
+					pagina.resetar();
+				} else {
+					pagina.clock();
+				}
 			}
 		}
 	}
@@ -84,7 +89,8 @@ public class SO {
 			System.out.println("[" + idProcesso + "] > LEU: endereco: '" + endereco + "', virtual: '" + enderecoVirtual + "' -> VALOR '" + valorLido + "'");
 		} else if ((comandos[1].equals("W"))) {
 			// Valor aleatório para ser persistido
-			int valor = this.getGerador().nextInt(100);
+			// int valor = this.getGerador().nextInt(100);
+			int valor = Integer.parseInt(comandos[2]);
 			System.out.println("[" + idProcesso + "] > GRAVAR: endereco: '" + endereco + "', virtual: '" + enderecoVirtual + "' -> VALOR '" + valor + "'");
 			this.gravar(controle, enderecoVirtual, valor);
 		}
@@ -307,14 +313,6 @@ public class SO {
 
 	private void setClock(Clock clock) {
 		this.clock = clock;
-	}
-
-	private Random getGerador() {
-		return this.gerador;
-	}
-
-	private void setGerador(Random gerador) {
-		this.gerador = gerador;
 	}
 
 	private Map<Integer, Controle> getProcessos() {

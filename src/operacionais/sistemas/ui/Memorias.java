@@ -1,25 +1,22 @@
 package operacionais.sistemas.ui;
 
+import javafx.scene.Scene;
+import javafx.stage.Stage;
 import java.util.Collection;
-
+import javafx.geometry.Insets;
+import javafx.scene.text.Font;
 import operacionais.sistemas.SO;
+import javafx.scene.image.Image;
+import javafx.scene.layout.VBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.Button;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.text.FontWeight;
+import javafx.application.Application;
 import operacionais.sistemas.memorias.RAM;
 import operacionais.sistemas.memorias.Virtual;
 import operacionais.sistemas.memorias.Virtual.Pagina;
-import javafx.application.Application;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
-import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.Tooltip;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
-import javafx.stage.Stage;
 
 public final class Memorias extends Application {
 	
@@ -42,7 +39,7 @@ public final class Memorias extends Application {
 	@Override
 	public void start(Stage window) throws Exception {
 		this.window = window;
-		this.window.setTitle("UPE - Simulador de Paginação MRU [2016.1]");
+		this.window.setTitle("[SO 2016.1] Simulador de Paginação MRU");
 		this.window.show();
 		
 		SO.instancia().preparar();

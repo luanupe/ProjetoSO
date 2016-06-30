@@ -120,14 +120,14 @@ public final class Virtual {
 			this.setModificada(modificada);
 			this.setReferenciada(referenciada);
 		}
-
+		
 		public void clock() {
-			++this.contador;
-			if (((this.contador % 19) == 0)) {
-				this.setContador(0);
-				this.setReferenciada(false);
-				// System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t FIM DO CICLO DE CLOCK");
-			}
+			this.contador++;
+		}
+		
+		public void resetar() {
+			this.setContador(0);
+			this.setReferenciada(false);
 		}
 
 		public int getContador() {
