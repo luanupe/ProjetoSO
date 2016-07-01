@@ -5,8 +5,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class RAM {
 
-	public final static int PAGINAS = 5; // Quantidade de páginas por processo
-	public final static int CAPACIDADE = (RAM.PAGINAS * Disco.PROCESSOS);
+	public final static int PAGINAS_POR_PROCESSO = 5; // Quantidade de páginas por processo
+	public final static int CAPACIDADE = (RAM.PAGINAS_POR_PROCESSO * Disco.PROCESSOS);
 
 	private Map<Integer, Integer> enderecos;
 

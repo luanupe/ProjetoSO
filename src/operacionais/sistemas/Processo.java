@@ -8,6 +8,7 @@ public class Processo extends Thread {
 	protected Processo(int processo, String instrucoes) { 
 		this.setProcesso(processo);
 		this.setInstrucoes(instrucoes);
+		System.out.println(this.getInstrucoes());
 	}
 
 	@Override

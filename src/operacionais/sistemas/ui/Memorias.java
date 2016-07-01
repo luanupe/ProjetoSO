@@ -26,7 +26,8 @@ public final class Memorias extends Application {
 		return Memorias.INSTANCIA;
 	}
 	
-	public static void main(String[] args) { 
+	public static void main(String[] args) {
+		SO.instancia().preparar();
 		Application.launch(args);
 	}
 
@@ -41,8 +42,6 @@ public final class Memorias extends Application {
 		this.window = window;
 		this.window.setTitle("[SO 2016.1] Simulador de Paginação MRU");
 		this.window.show();
-		
-		SO.instancia().preparar();
 		this.atualizarTela();
 	}
 	

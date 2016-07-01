@@ -9,7 +9,7 @@ import operacionais.sistemas.memorias.Virtual.Pagina;
 
 public class SO {
 
-	public static final int CICLO = 19;
+	public static final int CICLO = 20;
 	private static SO INSTANCIA;
 
 	public static SO instancia() {
@@ -32,7 +32,7 @@ public class SO {
 		this.getClock().iniciar();
 
 		for (int i = 1; i <= Disco.PROCESSOS; i++) {
-			Processo processo = new Processo(i, (new FabricaDeEntradas(RAM.PAGINAS * 2)).getNewEntrada());
+			Processo processo = new Processo(i, (new FabricaDeEntradas(RAM.PAGINAS_POR_PROCESSO * 2)).getNewEntrada());
 			Controle controle = new Controle(processo);
 			controle.preparar();
 
@@ -347,8 +347,8 @@ public class SO {
 			 * LI: Limite Inferior, LS: Limite Superior
 			 */
 
-			int LIVirtual = (RAM.PAGINAS * this.getId()) - RAM.PAGINAS;
-			int LSVirtual = (LIVirtual + RAM.PAGINAS);
+			int LIVirtual = (RAM.PAGINAS_POR_PROCESSO * this.getId()) - RAM.PAGINAS_POR_PROCESSO;
+			int LSVirtual = (LIVirtual + RAM.PAGINAS_POR_PROCESSO);
 
 			this.setLIVirtual(LIVirtual * 2);
 			this.setLSVirtual(LSVirtual * 2);
